@@ -27,7 +27,7 @@ class address():
         self.name = name
         self.addr = addr
 
-    def getName(self, name):
+    def getName(self):
         return self.name
 
     def getAddr(self):
