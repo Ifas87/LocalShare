@@ -2,22 +2,41 @@ from classes import *
 import os, sys, subprocess
 import socket, threading, time, re
 from tkinter import *
+from tkinter import ttk
 from build.gui import *
+
+
+IDENTIFICATION_PORT = 9100
+DATA_TRANSFER_PORT = 9090
 
 interfaces = []
 devices = []
 names = []
+viable_devices = []
+threads = []
+
+pinged = beaconThread('', IDENTIFICATION_PORT)
+pinged.start()
 
 for device in os.popen('arp -a'): interfaces.append(device)
 
 for blank in interfaces:
   m = re.search('(192\.168\.\d+\.\d+)', blank)
   if m:
-      if not m.group(1).split(".")[3] in ("1", "255"):
-          a = address(socket.getfqdn(m.group(1)), m.group(1))
-          devices.append(a)
+    if not m.group(1).split(".")[3] in ("1", "255"):
+      a = address(socket.getfqdn(m.group(1)), m.group(1))
+      devices.append(a)
 
-for i in devices:
+threads = []
+for potential in devices:
+    t1 = probingThread(potential, viable_devices, IDENTIFICATION_PORT)
+    t1.start()
+    threads.append(t1)
+
+for thread in threads:
+    thread.join()
+
+for i in viable_devices:
   names.append(i.getName())
 
 
@@ -93,10 +112,10 @@ canvas.create_rectangle(
 
 default = StringVar()
 default.set("none")
-Users = OptionMenu(
+Users = ttk.Combobox(
   canvas,
-  default,
-  *names
+  textvariable=default,
+  values=names
   )
 Users.place(
   x=20.0,

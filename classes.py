@@ -1,4 +1,5 @@
 import threading, pickle, socket, time, os
+from tkinter.messagebox import askyesno
 
 SEPARATOR = "<SEPARATOR>"
 BUFFER_SIZE = 1024 * 4
@@ -12,11 +13,18 @@ The flags represent 'Available?', 'confirmation' , 'About to Send', 'busy'
 """
 class pingMessage():
     flags = [False, False, False, False, False, False]
+    filename = ""
     def __init__(self, flags):
         self.flags = flags
 
     def getFlags(self):
         return self.flags
+
+    def setFilename(self, filename):
+        self.filename=filename
+
+    def getFilename(self):
+        return self.filename
 
 
 """
@@ -147,8 +155,6 @@ class receivingThread(threading.Thread):
                     if not bytes_read:
                         break
                     f.write(bytes_read)
-                    print(not bytes_read)
-            """"""
             
             print("File received")
             time.sleep(1)
@@ -162,7 +168,7 @@ class sendingThread(threading.Thread):
     def __init__(self, host, port, filename):
         threading.Thread.__init__(self)
         self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.message = pickle.dumps(pingMessage([True, False, False, False, False, False]))
+        self.message = pingMessage([False, False, True, False, False, False])
 
         self.host = host
         self.port = port
@@ -171,11 +177,15 @@ class sendingThread(threading.Thread):
         
     def run(self):
         self.client.connect((self.host, self.port))
+        self.message.setFilename(self.filename)
+        self.message = pickle.dumps(self.message)
+        
         self.client.send(self.message)
         dataFromServer = self.client.recv(1024)
 
         if (pickle.loads(dataFromServer).getFlags())[1] == True:
-            self.client.send(f"{self.filename}{SEPARATOR}{self.filesize}".encode())
+            #self.client.send(f"{self.filename}{SEPARATOR}{self.filesize}".encode())
+            
             print("sent filename by client ")
             
             with open(self.filename, "rb") as f:
@@ -217,7 +227,35 @@ class receivingThread2(threading.Thread):
 
             csocket = clientsock
             dataFromClient = pickle.loads(clientsock.recv(BUFFER_SIZE))
-
+            print(dataFromClient.getFlags())
+            
             if (dataFromClient.getFlags())[2] == True:
-               message = pickle.dumps(pingMessage([False, True, False, False, False, False]))
+                reply = pickle.dumps(pingMessage([False, True, False, False, False, False]))
+                csocket.send(reply)
+                
+                popup = "User has sent the following file: " + dataFromClient.getFilename() + "\n Accept file download?"
+                user_response = askyesno(title="Incoming File Sent", message=popup)
 
+                self.filename = "stuff" + os.path.basename(dataFromClient.getFilename())
+                
+                if user_response:
+                    with open(self.filename, "wb") as f:
+                        while(True):
+                            print("About to loop into", self.filename)
+                            bytes_read = csocket.recv(BUFFER_SIZE)
+                            if not bytes_read:
+                                break
+                            f.write(bytes_read)
+            
+            print("File received")
+            time.sleep(1)
+        print("done")
+
+
+"""
+newServer = receivingThread2("127.0.0.1", 9090)
+newServer.start()
+
+newclient = sendingThread("127.0.0.1", 9090, "hello.txt")
+newclient.start()
+"""
