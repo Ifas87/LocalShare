@@ -18,6 +18,9 @@ threads = []
 pinged = beaconThread('', IDENTIFICATION_PORT)
 pinged.start()
 
+receiver = receivingThread2('127.0.0.1', DATA_TRANSFER_PORT)
+receiver.start()
+
 for device in os.popen('arp -a'): interfaces.append(device)
 
 for blank in interfaces:
@@ -29,15 +32,26 @@ for blank in interfaces:
 
 threads = []
 for potential in devices:
-    t1 = probingThread(potential, viable_devices, IDENTIFICATION_PORT)
-    t1.start()
-    threads.append(t1)
+  t1 = probingThread(potential, viable_devices, IDENTIFICATION_PORT)
+  t1.start()
+  threads.append(t1)
 
 for thread in threads:
-    thread.join()
+  thread.join()
 
 for i in viable_devices:
   names.append(i.getName())
+
+
+def getIPbyName(name):
+  return (viable_devices[names.index(name)]).getAddr()
+
+
+# Change this with the file queue from fileDailog
+def start_data_transfer():
+  print("Button Pressed!")
+  sender = sendingThread('127.0.0.1', DATA_TRANSFER_PORT, "hello.txt")
+  sender.start()
 
 
 window = Tk()
@@ -157,7 +171,7 @@ button_1 = Button(
   image=button_image_1,
   borderwidth=0,
   highlightthickness=0,
-  command=lambda: print("button_1 clicked"),
+  command=start_data_transfer,
   relief="flat"
 )
 button_1.place(
