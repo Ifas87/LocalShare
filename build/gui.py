@@ -17,8 +17,8 @@ ASSETS_PATH = OUTPUT_PATH / Path("./assets")
 def relative_to_assets(path: str) -> Path:
     return ASSETS_PATH / Path(path)
 
-
-if __name__ == "__main__":
+if __name__ == '__main__':
+    
     window = Tk()
 
     window.geometry("525x600")
@@ -48,7 +48,7 @@ if __name__ == "__main__":
         158.0,
         17.000000000000057,
         anchor="nw",
-        text="LocalShare",
+        text="bitBybit",
         fill="#22223B",
         font=("Montserrat SemiBold", 36 * -1)
     )
@@ -131,5 +131,20 @@ if __name__ == "__main__":
         height=35.0
     )
 
+    button_image_2 = PhotoImage(
+        file=relative_to_assets("button_2.png"))
+    button_2 = Button(
+        image=button_image_2,
+        borderwidth=0,
+        highlightthickness=0,
+        command=lambda: print("button_2 clicked"),
+        relief="flat"
+    )
+    button_2.place(
+        x=388.0,
+        y=238.00000000000006,
+        width=86.0,
+        height=17.0
+    )
     window.resizable(False, False)
     window.mainloop()

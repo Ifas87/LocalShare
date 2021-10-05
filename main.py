@@ -3,22 +3,25 @@ import os, sys, subprocess
 import socket, threading, time, re
 from tkinter import *
 from tkinter import ttk
+from tkinter import filedialog as fd
 from build.gui import *
 
 
 IDENTIFICATION_PORT = 9100
 DATA_TRANSFER_PORT = 9090
+DEVICE_IP = socket.gethostbyname(socket.gethostname())
 
 interfaces = []
 devices = []
 names = []
 viable_devices = []
 threads = []
+file_list = []
 
 pinged = beaconThread('', IDENTIFICATION_PORT)
 pinged.start()
 
-receiver = receivingThread2('127.0.0.1', DATA_TRANSFER_PORT)
+receiver = receivingThread2(DEVICE_IP, DATA_TRANSFER_PORT)
 receiver.start()
 
 for device in os.popen('arp -a'): interfaces.append(device)
@@ -43,18 +46,24 @@ for i in viable_devices:
   names.append(i.getName())
 
 
+window = Tk()
+
 def getIPbyName(name):
   return (viable_devices[names.index(name)]).getAddr()
 
 
-# Change this with the file queue from fileDailog
 def start_data_transfer():
-  print("Button Pressed!")
-  sender = sendingThread('127.0.0.1', DATA_TRANSFER_PORT, "hello.txt")
-  sender.start()
+  for file in file_list:
+    print("Data transfer Started")
+    sender = sendingThread(getIPbyName(Users.get()), DATA_TRANSFER_PORT, file)
+    sender.start()
 
 
-window = Tk()
+def load_file(destination):
+  for i in fd.askopenfilenames(parent=window, title="Choose the files to send"):
+    destination.append(i)
+  print(destination)
+
 
 window.geometry("525x600")
 window.configure(bg = "#F9F5F3")
@@ -181,5 +190,20 @@ button_1.place(
   height=35.0
 )
 
+button_image_2 = PhotoImage(
+    file=relative_to_assets("button_2.png"))
+button_2 = Button(
+    image=button_image_2,
+    borderwidth=0,
+    highlightthickness=0,
+    command=lambda: load_file(file_list),
+    relief="flat"
+)
+button_2.place(
+    x=388.0,
+    y=238.00000000000006,
+    width=86.0,
+    height=17.0
+)
 window.resizable(False, False)
 window.mainloop()
