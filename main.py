@@ -3,6 +3,7 @@ import os, sys, subprocess
 import socket, threading, time, re
 from tkinter import *
 from tkinter import ttk
+from tkinter.ttk import *
 from tkinter import filedialog as fd
 from build.gui import *
 
@@ -62,7 +63,7 @@ def start_data_transfer():
 def load_file(destination):
   for i in fd.askopenfilenames(parent=window, title="Choose the files to send"):
     destination.append(i)
-  print(destination)
+    queue_list.insert(END, os.path.basename(i))
 
 
 window.geometry("525x600")
@@ -92,7 +93,7 @@ canvas.create_text(
   158.0,
   17.000000000000057,
   anchor="nw",
-  text="LocalShare",
+  text="bitBybit",
   fill="#22223B",
   font=("Montserrat SemiBold", 36 * -1)
 )
@@ -166,10 +167,27 @@ entry_1.place(
   height=139.0
 )
 
+# File Label
+scrollbar = Scrollbar(canvas)
+queue_list = Listbox(canvas, yscrollcommand = scrollbar.set)
+
+queue_list.place(
+  x=297,
+  y=269.00000000000006,
+  width=161.0,
+  height=133.0
+)
+scrollbar.place(
+  x=460,
+  y=269.00000000000006,
+  width=39.0,
+  height=133.0
+)
+
 canvas.create_rectangle(
   293.0,
   265.00000000000006,
-  483.0,
+  496.0,
   406.00000000000006,
   fill="#C4C4C4",
   outline="")
