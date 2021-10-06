@@ -6,6 +6,7 @@ from tkinter import ttk
 from tkinter.ttk import *
 from tkinter import filedialog as fd
 from build.gui import *
+from cryptography.fernet import Fernet
 
 
 IDENTIFICATION_PORT = 9100
@@ -54,10 +55,13 @@ def getIPbyName(name):
 
 
 def start_data_transfer():
+  key = Fernet.generate_key()
   for file in file_list:
-    print("Data transfer Started")
-    sender = sendingThread(getIPbyName(Users.get()), DATA_TRANSFER_PORT, file)
+    sender = sendingThread(getIPbyName(Users.get()), DATA_TRANSFER_PORT,
+             file, bool(Enc_state.get()), bool(Cmp_state.get()), key)
     sender.start()
+  file_list.clear()
+  queue_list.delete(0, END)
 
 
 def load_file(destination):
@@ -66,7 +70,7 @@ def load_file(destination):
     queue_list.insert(END, os.path.basename(i))
 
 
-window.geometry("525x600")
+window.geometry("525x550")
 window.configure(bg = "#F9F5F3")
 
 canvas = Canvas(
@@ -134,6 +138,21 @@ canvas.create_rectangle(
   outline=""
 )
 
+#Custom Elements
+Enc_state = IntVar()
+encryption = Checkbutton(window, text='Encrypt Data', variable=Enc_state, onvalue=1, offvalue=0)
+encryption.place(
+  x=18.000000000000007,
+  y=430.00000000000006,
+)
+
+Cmp_state = IntVar()
+compression = Checkbutton(window, text='Compress Data', variable=Cmp_state, onvalue=1, offvalue=0)
+compression.place(
+  x=18.000000000000007,
+  y=455.00000000000006,
+)
+
 default = StringVar()
 default.set("none")
 Users = ttk.Combobox(
@@ -191,6 +210,11 @@ canvas.create_rectangle(
   406.00000000000006,
   fill="#C4C4C4",
   outline="")
+
+#label element
+result = Label(canvas, text = "")
+
+result.place(x = 350, y = 425, width = 160, height = 100)
 
 button_image_1 = PhotoImage(
   file=relative_to_assets("button_1.png"))

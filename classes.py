@@ -1,5 +1,6 @@
 import threading, pickle, socket, time, os
 from tkinter.messagebox import askyesno
+from cryptography.fernet import Fernet
 
 SEPARATOR = "<SEPARATOR>"
 BUFFER_SIZE = 1024 * 4
@@ -14,6 +15,7 @@ The flags represent 'Available?', 'confirmation' , 'About to Send', 'busy'
 class pingMessage():
     flags = [False, False, False, False, False, False]
     filename = ""
+    key = None
     def __init__(self, flags):
         self.flags = flags
 
@@ -26,6 +28,11 @@ class pingMessage():
     def getFilename(self):
         return self.filename
 
+    def setKey(self, key):
+        self.key=key
+
+    def getKey(self):
+        return self.key
 
 """
 
@@ -165,19 +172,22 @@ class receivingThread(threading.Thread):
 The same class but for the client/sending thread
 """
 class sendingThread(threading.Thread):
-    def __init__(self, host, port, filename):
+    def __init__(self, host, port, filename, Encryption, Compression, key):
         threading.Thread.__init__(self)
         self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.message = pingMessage([False, False, True, False, False, False])
+        self.message = pingMessage([False, False, True, False, Encryption, Compression])
 
         self.host = host
         self.port = port
         self.filename = filename
         self.filesize = os.path.getsize(filename)
+        self.key = key
+        self.fern = Fernet(self.key)
         
     def run(self):
         self.client.connect((self.host, self.port))
         self.message.setFilename(self.filename)
+        self.message.setKey(self.key)
         self.message = pickle.dumps(self.message)
         
         self.client.send(self.message)
@@ -189,11 +199,16 @@ class sendingThread(threading.Thread):
             print("sent filename by client ")
             
             with open(self.filename, "rb") as f:
-                while True:
-                    bytes_read = f.read(BUFFER_SIZE)
-                    if not bytes_read:
-                        break
-                    self.client.sendall(bytes_read)
+                if((pickle.loads(self.message).getFlags())[4] == True):
+                    bytes_read = f.read()
+                    encrypted_data = self.fern.encrypt(bytes_read)
+                    self.client.sendall(encrypted_data)
+                else:
+                    while True:
+                        bytes_read = f.read(BUFFER_SIZE)
+                        if not bytes_read:
+                            break
+                        self.client.sendall(bytes_read)
 
         print("File sent")
         self.client.shutdown(socket.SHUT_RDWR)
@@ -216,6 +231,8 @@ class receivingThread2(threading.Thread):
         self.server.bind((host, port))
 
         self.filename = ""
+        self.key = None
+        self.enc_module = None
 
     """
     Specific instructions function
@@ -228,10 +245,13 @@ class receivingThread2(threading.Thread):
             csocket = clientsock
             dataFromClient = pickle.loads(clientsock.recv(BUFFER_SIZE))
             print(dataFromClient.getFlags())
-            
+
             if (dataFromClient.getFlags())[2] == True:
                 reply = pickle.dumps(pingMessage([False, True, False, False, False, False]))
                 csocket.send(reply)
+
+                self.key = dataFromClient.getKey()
+                self.enc_module = Fernet(self.key)
                 
                 popup = "User has sent the following file: " + dataFromClient.getFilename() + "\n Accept file download?"
                 user_response = askyesno(title="Incoming File Sent", message=popup)
@@ -240,12 +260,20 @@ class receivingThread2(threading.Thread):
                 
                 if user_response:
                     with open(self.filename, "wb") as f:
-                        while(True):
-                            print("About to loop into", self.filename)
-                            bytes_read = csocket.recv(BUFFER_SIZE)
-                            if not bytes_read:
-                                break
-                            f.write(bytes_read)
+                        total_bytes = b'' 
+                        if (dataFromClient.getFlags())[4] == True:
+                            while(True):
+                                bytes_read = csocket.recv(BUFFER_SIZE)
+                                if not bytes_read:
+                                    break
+                                total_bytes += bytes_read
+                            f.write(self.enc_module.decrypt(total_bytes))
+                        else:
+                            while(True):
+                                bytes_read = csocket.recv(BUFFER_SIZE)
+                                if not bytes_read:
+                                    break
+                                f.write(bytes_read)
             
             print("File received")
             time.sleep(1)
