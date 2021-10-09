@@ -7,6 +7,8 @@ from tkinter.ttk import *
 from tkinter import filedialog as fd
 from build.gui import *
 from cryptography.fernet import Fernet
+from datetime import datetime
+from random import randint
 
 
 IDENTIFICATION_PORT = 9100
@@ -55,11 +57,18 @@ def getIPbyName(name):
 
 
 def start_data_transfer():
+  current_time = datetime.now()
+  temp_filename = current_time.strftime("%m/%d/%Y_%H:%M:%S_package")
+
+  tar = tarfile.open(temp_filename, mode="w:gz")
+  
   key = Fernet.generate_key()
   for file in file_list:
-    sender = sendingThread(getIPbyName(Users.get()), DATA_TRANSFER_PORT,
-             file, bool(Enc_state.get()), bool(Cmp_state.get()), key)
-    sender.start()
+    tar.add(file)  
+  sender = sendingThread(getIPbyName(Users.get()), DATA_TRANSFER_PORT,
+             tar, bool(Enc_state.get()), bool(Cmp_state.get()), key)
+  sender.start()
+
   file_list.clear()
   queue_list.delete(0, END)
 
