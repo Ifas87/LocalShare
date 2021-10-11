@@ -9,6 +9,7 @@ from build.gui import *
 from cryptography.fernet import Fernet
 from datetime import datetime
 from random import randint
+import tarfile
 
 
 IDENTIFICATION_PORT = 9100
@@ -22,7 +23,7 @@ viable_devices = []
 threads = []
 file_list = []
 
-pinged = beaconThread('', IDENTIFICATION_PORT)
+pinged = beaconThread(DEVICE_IP, IDENTIFICATION_PORT)
 pinged.start()
 
 receiver = receivingThread2(DEVICE_IP, DATA_TRANSFER_PORT)
@@ -58,15 +59,16 @@ def getIPbyName(name):
 
 def start_data_transfer():
   current_time = datetime.now()
-  temp_filename = current_time.strftime("%m/%d/%Y_%H:%M:%S_package")
+  temp_filename = "file_"+current_time.strftime("%m_%d_%Y_%H_%M_%S_%f")+"_package.tar.gz"
 
   tar = tarfile.open(temp_filename, mode="w:gz")
   
   key = Fernet.generate_key()
   for file in file_list:
-    tar.add(file)  
+    tar.add(file)
+  tar.close()
   sender = sendingThread(getIPbyName(Users.get()), DATA_TRANSFER_PORT,
-             tar, bool(Enc_state.get()), bool(Cmp_state.get()), key)
+             temp_filename, bool(Enc_state.get()), key)
   sender.start()
 
   file_list.clear()

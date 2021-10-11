@@ -172,10 +172,10 @@ class receivingThread(threading.Thread):
 The same class but for the client/sending thread
 """
 class sendingThread(threading.Thread):
-    def __init__(self, host, port, filename, Encryption, Compression, key):
+    def __init__(self, host, port, filename, Encryption, key):
         threading.Thread.__init__(self)
         self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.message = pingMessage([False, False, True, False, Encryption, Compression])
+        self.message = pingMessage([False, False, True, False, Encryption, False])
 
         self.host = host
         self.port = port
@@ -196,13 +196,14 @@ class sendingThread(threading.Thread):
         if (pickle.loads(dataFromServer).getFlags())[1] == True:
             #self.client.send(f"{self.filename}{SEPARATOR}{self.filesize}".encode())
             
-            print("sent filename by client ")
-            
             with open(self.filename, "rb") as f:
                 if((pickle.loads(self.message).getFlags())[4] == True):
-                    bytes_read = f.read()
-                    encrypted_data = self.fern.encrypt(bytes_read)
-                    self.client.sendall(encrypted_data)
+                    while True:
+                        bytes_read = f.read(BUFFER_SIZE)
+                        if not bytes_read:
+                            break
+                        encrypted_data = self.fern.encrypt(bytes_read)
+                        self.client.sendall(encrypted_data)
                 else:
                     while True:
                         bytes_read = f.read(BUFFER_SIZE)
@@ -266,8 +267,8 @@ class receivingThread2(threading.Thread):
                                 bytes_read = csocket.recv(BUFFER_SIZE)
                                 if not bytes_read:
                                     break
-                                total_bytes += bytes_read
-                            f.write(self.enc_module.decrypt(total_bytes))
+                                #total_bytes += bytes_read
+                                f.write(self.enc_module.decrypt(bytes_read))
                         else:
                             while(True):
                                 bytes_read = csocket.recv(BUFFER_SIZE)
